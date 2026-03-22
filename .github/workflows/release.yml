@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Prepare binary
+        run: |
+          mkdir dist
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp target/release/cnlint.exe dist/cnlint-windows.exe
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            cp target/release/cnlint dist/cnlint-macos
+          else
+            cp target/release/cnlint dist/cnlint-linux
+          fi
+        shell: bash
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
