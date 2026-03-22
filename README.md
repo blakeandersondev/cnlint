@@ -46,10 +46,10 @@ Perfect for:
 
 ## 📦 Installation
 
-### From GitHub Releases (pre-built binaries)
+### From GitHub Releases
 Go to → https://github.com/blakeandersondev/cnlint/releases
 
-Download the product matching your platform
+Download the product matching your platform.
 
 ### From source
 ```aiignore
