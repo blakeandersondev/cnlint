@@ -46,12 +46,40 @@ Perfect for:
 
 ## 📦 Installation
 
-### From GitHub Releases
+### Opt 1: From GitHub Releases
 Go to → https://github.com/blakeandersondev/cnlint/releases
 
-Download the product matching your platform.
+**Download the product matching your platform.**
 
-### From source
+#### 🍎 macOS
+```aiignore
+# rename (optional but recommended)
+mv cnlint-macos cnlint
+
+# make executable
+chmod +x cnlint
+
+# remove security warning
+xattr -d com.apple.quarantine cnlint
+```
+
+#### 🐧 Linux
+```aiignore
+# rename (optional)
+mv cnlint-linux cnlint
+
+# make executable
+chmod +x cnlint
+```
+
+#### 🪟Windows
+```aiignore
+# rename (optional)
+ren cnlint-windows.exe cnlint.exe
+```
+
+### Opt 2: From source
+
 ```aiignore
 git clone https://github.com/your-username/cnlint.git
 cd cnlint
