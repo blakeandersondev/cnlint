@@ -47,18 +47,9 @@ Perfect for:
 ## 📦 Installation
 
 ### From GitHub Releases (pre-built binaries)
-Go to → https://github.com/your-username/cnlint/releases
+Go to → https://github.com/blakeandersondev/cnlint/releases
 
-Download the binary matching your platform (e.g. cnlint-x86_64-unknown-linux-gnu.tar.gz or .zip)
-
-Then:
-
-```aiignore
-# Example for Linux/macOS
-tar -xzf cnlint-*.tar.gz
-sudo mv cnlint /usr/local/bin/
-# or move to any directory in your $PATH
-```
+Download the product matching your platform
 
 ### From source
 ```aiignore
