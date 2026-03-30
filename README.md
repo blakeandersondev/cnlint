@@ -42,6 +42,23 @@ Perfect for:
 - ✅ CI-friendly check mode
 - ⚡ Fast and zero-dependency binary
 
+## Supported Languages
+
+`cnlint` currently supports source files using these extensions:
+
+- Java: `.java`
+- Go: `.go`
+- JavaScript / JSX: `.js`, `.jsx`
+- TypeScript / TSX: `.ts`, `.tsx`
+- Kotlin: `.kt`
+- C / C++ headers and sources: `.c`, `.cc`, `.cpp`, `.h`, `.hpp`
+- Rust: `.rs`
+- Swift: `.swift`
+- Python: `.py`
+- YAML: `.yaml`, `.yml`
+- Shell: `.sh`, `.bash`, `.zsh`
+- SQL: `.sql`
+
 ---
 
 ## 📦 Installation

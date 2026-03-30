@@ -7,6 +7,7 @@ pub enum Language {
     Sql,
     Rust,
     Shell,
+    Swift,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +59,14 @@ const SHELL_SYNTAX: CommentSyntax = CommentSyntax {
     supports_backticks: true,
 };
 
+const SWIFT_SYNTAX: CommentSyntax = CommentSyntax {
+    language: Language::Swift,
+    line_markers: &["//"],
+    block_marker: Some(("/*", "*/")),
+    supports_regex_literals: false,
+    supports_backticks: false,
+};
+
 pub fn comment_syntax_for_path(path: &Path) -> Option<CommentSyntax> {
     let extension = path.extension()?.to_str()?.to_ascii_lowercase();
 
@@ -72,6 +81,7 @@ pub fn comment_syntax_for_path(path: &Path) -> Option<CommentSyntax> {
         "py" | "yaml" | "yml" => Some(HASH_LINE_SYNTAX),
         "sh" | "bash" | "zsh" => Some(SHELL_SYNTAX),
         "sql" => Some(SQL_SYNTAX),
+        "swift" => Some(SWIFT_SYNTAX),
         _ => None,
     }
 }

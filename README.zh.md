@@ -41,6 +41,23 @@
 - ✅ CI友好的检查模式
 - ⚡ 快速且无依赖的二进制文件
 
+## 支持的语言
+
+`cnlint` 当前支持以下扩展名对应的源码文件：
+
+- Java: `.java`
+- Go: `.go`
+- JavaScript / JSX: `.js`, `.jsx`
+- TypeScript / TSX: `.ts`, `.tsx`
+- Kotlin: `.kt`
+- C / C++ 头文件与源码: `.c`, `.cc`, `.cpp`, `.h`, `.hpp`
+- Rust: `.rs`
+- Swift: `.swift`
+- Python: `.py`
+- YAML: `.yaml`, `.yml`
+- Shell: `.sh`, `.bash`, `.zsh`
+- SQL: `.sql`
+
 ---
 
 ## 📦 安装

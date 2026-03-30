@@ -50,10 +50,18 @@ enum ScanState {
     BlockComment {
         start_byte: usize,
         start_line: usize,
+        start_marker: &'static str,
         end_marker: &'static str,
+        depth: usize,
+        allow_nesting: bool,
     },
     RustRawString {
         hashes: usize,
+    },
+    SwiftString {
+        hashes: usize,
+        multiline: bool,
+        escape: bool,
     },
 }
 
@@ -101,6 +109,18 @@ pub fn extract_comments(content: &str, syntax: CommentSyntax) -> Vec<CommentMatc
                     continue;
                 }
 
+                if let Some((hashes, multiline, start_len)) =
+                    detect_swift_string_start(bytes, index, syntax.language)
+                {
+                    state = ScanState::SwiftString {
+                        hashes,
+                        multiline,
+                        escape: false,
+                    };
+                    index += start_len;
+                    continue;
+                }
+
                 if let Some((marker, kind)) = detect_comment_start(bytes, index, syntax) {
                     match kind {
                         CommentKind::Line => {
@@ -115,11 +135,15 @@ pub fn extract_comments(content: &str, syntax: CommentSyntax) -> Vec<CommentMatc
                             index = end;
                         }
                         CommentKind::Block => {
-                            let (_, end_marker) = syntax.block_marker.expect("block marker");
+                            let (start_marker, end_marker) =
+                                syntax.block_marker.expect("block marker");
                             state = ScanState::BlockComment {
                                 start_byte: index,
                                 start_line: line,
+                                start_marker,
                                 end_marker,
+                                depth: 1,
+                                allow_nesting: syntax.language == Language::Swift,
                             };
                             index += marker.len();
                         }
@@ -225,7 +249,10 @@ pub fn extract_comments(content: &str, syntax: CommentSyntax) -> Vec<CommentMatc
             ScanState::BlockComment {
                 start_byte,
                 start_line,
+                start_marker,
                 end_marker,
+                mut depth,
+                allow_nesting,
             } => {
                 if bytes[index] == b'\n' {
                     line += 1;
@@ -233,16 +260,42 @@ pub fn extract_comments(content: &str, syntax: CommentSyntax) -> Vec<CommentMatc
                     continue;
                 }
 
+                if allow_nesting && starts_with(bytes, index, start_marker.as_bytes()) {
+                    depth += 1;
+                    state = ScanState::BlockComment {
+                        start_byte,
+                        start_line,
+                        start_marker,
+                        end_marker,
+                        depth,
+                        allow_nesting,
+                    };
+                    index += start_marker.len();
+                    continue;
+                }
+
                 if starts_with(bytes, index, end_marker.as_bytes()) {
                     let end = index + end_marker.len();
-                    comments.push(CommentMatch {
-                        kind: CommentKind::Block,
-                        start_line,
-                        end_line: line,
-                        start_byte,
-                        end_byte: end,
-                    });
-                    state = ScanState::Code;
+                    depth -= 1;
+                    if depth == 0 {
+                        comments.push(CommentMatch {
+                            kind: CommentKind::Block,
+                            start_line,
+                            end_line: line,
+                            start_byte,
+                            end_byte: end,
+                        });
+                        state = ScanState::Code;
+                    } else {
+                        state = ScanState::BlockComment {
+                            start_byte,
+                            start_line,
+                            start_marker,
+                            end_marker,
+                            depth,
+                            allow_nesting,
+                        };
+                    }
                     index = end;
                     continue;
                 }
@@ -262,6 +315,70 @@ pub fn extract_comments(content: &str, syntax: CommentSyntax) -> Vec<CommentMatc
                     continue;
                 }
 
+                index += 1;
+            }
+            ScanState::SwiftString {
+                hashes,
+                multiline,
+                mut escape,
+            } => {
+                let current = bytes[index];
+
+                if current == b'\n' {
+                    line += 1;
+                    if !multiline {
+                        state = ScanState::Code;
+                    }
+                    index += 1;
+                    continue;
+                }
+
+                if multiline {
+                    if swift_string_end(bytes, index, hashes, true) {
+                        state = ScanState::Code;
+                        index += 3 + hashes;
+                        continue;
+                    }
+
+                    index += 1;
+                    continue;
+                }
+
+                if hashes == 0 {
+                    if escape {
+                        escape = false;
+                        state = ScanState::SwiftString {
+                            hashes,
+                            multiline,
+                            escape,
+                        };
+                        index += 1;
+                        continue;
+                    }
+
+                    if current == b'\\' {
+                        escape = true;
+                        state = ScanState::SwiftString {
+                            hashes,
+                            multiline,
+                            escape,
+                        };
+                        index += 1;
+                        continue;
+                    }
+                }
+
+                if swift_string_end(bytes, index, hashes, false) {
+                    state = ScanState::Code;
+                    index += 1 + hashes;
+                    continue;
+                }
+
+                state = ScanState::SwiftString {
+                    hashes,
+                    multiline,
+                    escape,
+                };
                 index += 1;
             }
         }
@@ -383,6 +500,53 @@ fn rust_raw_string_end(bytes: &[u8], index: usize, hashes: usize) -> bool {
 
     for offset in 0..hashes {
         if bytes[index + 1 + offset] != b'#' {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn detect_swift_string_start(
+    bytes: &[u8],
+    index: usize,
+    language: Language,
+) -> Option<(usize, bool, usize)> {
+    if language != Language::Swift {
+        return None;
+    }
+
+    let mut cursor = index;
+    let mut hashes = 0usize;
+    while cursor < bytes.len() && bytes[cursor] == b'#' {
+        hashes += 1;
+        cursor += 1;
+    }
+
+    if starts_with(bytes, cursor, b"\"\"\"") {
+        return Some((hashes, true, hashes + 3));
+    }
+
+    if bytes.get(cursor) == Some(&b'"') {
+        return Some((hashes, false, hashes + 1));
+    }
+
+    None
+}
+
+fn swift_string_end(bytes: &[u8], index: usize, hashes: usize, multiline: bool) -> bool {
+    let quote_len = if multiline { 3 } else { 1 };
+
+    if multiline {
+        if !starts_with(bytes, index, b"\"\"\"") {
+            return false;
+        }
+    } else if bytes.get(index) != Some(&b'"') {
+        return false;
+    }
+
+    for offset in 0..hashes {
+        if bytes.get(index + quote_len + offset) != Some(&b'#') {
             return false;
         }
     }
